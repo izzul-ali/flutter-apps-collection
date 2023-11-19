@@ -26,12 +26,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home Screen'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Text(widget.token),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Center(
+          child: Text(
+            widget.token,
+            textAlign: TextAlign.center,
+          ),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {

@@ -1,7 +1,17 @@
+import 'dart:convert';
+
+import 'package:auth/screens/home_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:auth/screens/login_screen.dart';
 import 'package:auth/widget/auth_icon.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:auth/widget/or.dart';
+import 'package:auth/widget/text_input.dart';
+import 'package:auth/widget/third_party_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,23 +21,69 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  SharedPreferences? prefs;
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  @override
-  void dispose() {
-    // clear input from memory
-    usernameController.dispose();
-    emailController.dispose();
-    passwordController.dispose();
-
-    super.dispose();
+  void setPrefs() async {
+    prefs = await SharedPreferences.getInstance();
   }
 
-  void onSubmit() {
+  @override
+  void initState() {
+    setPrefs();
+    super.initState();
+  }
+
+  void onSubmit() async {
     print(
         'result: ${usernameController.value.text} : ${emailController.value.text} : ${passwordController.value.text}');
+
+    http.Response resp = await http.post(
+      Uri.parse(
+          '${dotenv.env['API_URL']}/accounts:signUp?key=${dotenv.env['API_KEY']}'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(
+        {
+          'email': emailController.value.text,
+          'password': passwordController.value.text,
+          'returnSecureToken': true
+        },
+      ),
+    );
+
+    if (resp.statusCode == 200) {
+      var body = jsonDecode(resp.body);
+      print('resp $body');
+
+      if (body['idToken'] != null) {
+        bool? isSuccessStoreToken = await prefs?.setString(
+          'token',
+          body['idToken'],
+        );
+
+        if (isSuccessStoreToken != null && isSuccessStoreToken) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (ctx) =>
+                  HomeScreen(token: prefs?.getString('token') ?? 'kosong'),
+            ),
+          );
+
+          return;
+        }
+        print('gagal menyimpan token');
+        return;
+      }
+      print('token tidak ada');
+
+      return;
+    }
+
+    var body = jsonDecode(resp.body);
+    print('resp failed $body');
+    return;
   }
 
   @override
@@ -61,80 +117,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30),
-              TextField(
-                controller: usernameController,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ThirdPartyAuth(
+                    onTap: () {},
+                    iconUrl: 'lib/assets/icons/facebook.png',
+                    title: 'Facebook',
+                  ),
+                  ThirdPartyAuth(
+                    onTap: () {},
+                    iconUrl: 'lib/assets/icons/google.png',
+                    title: 'Google',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const OrSeparate(),
+              const SizedBox(height: 25),
+              CustomTextInput(
+                usernameController: usernameController,
                 keyboardType: TextInputType.name,
-                onTapOutside: (event) =>
-                    FocusManager.instance.primaryFocus?.unfocus(),
-                decoration: InputDecoration(
-                  contentPadding: const EdgeInsets.all(18),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xffF5F9FE),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xff2A4ECA),
-                    ),
-                  ),
-                  hintStyle: const TextStyle(
-                    color: Color(0xff7C8BA0),
-                  ),
-                  hintText: 'Username',
-                ),
+                textHint: 'Username',
               ),
               const SizedBox(height: 15),
-              TextField(
-                controller: emailController,
+              CustomTextInput(
+                usernameController: emailController,
                 keyboardType: TextInputType.emailAddress,
-                onTapOutside: (event) =>
-                    FocusManager.instance.primaryFocus?.unfocus(),
-                decoration: InputDecoration(
-                  contentPadding: const EdgeInsets.all(18),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xffF5F9FE),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xff2A4ECA),
-                    ),
-                  ),
-                  hintStyle: const TextStyle(
-                    color: Color(0xff7C8BA0),
-                  ),
-                  hintText: 'Email',
-                ),
+                textHint: 'Email',
               ),
               const SizedBox(height: 15),
-              TextField(
-                controller: passwordController,
+              CustomTextInput(
+                usernameController: passwordController,
                 keyboardType: TextInputType.visiblePassword,
-                decoration: InputDecoration(
-                  contentPadding: const EdgeInsets.all(18),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xffF5F9FE),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xff2A4ECA),
-                    ),
-                  ),
-                  hintStyle: const TextStyle(
-                    color: Color(0xff7C8BA0),
-                  ),
-                  hintText: 'Password',
-                ),
+                textHint: 'Password',
               ),
               const SizedBox(height: 30),
               GestureDetector(
