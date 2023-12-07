@@ -1,0 +1,1 @@
+enum TodosFilter { pending, complete }
